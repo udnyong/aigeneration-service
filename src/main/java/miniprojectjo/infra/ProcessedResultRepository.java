@@ -1,8 +1,8 @@
 package miniprojectjo.infra;
-
-import java.util.List;
+import java.util.Optional;
 import miniprojectjo.domain.*;
-import org.springframework.data.repository.PagingAndSortingRepository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 @RepositoryRestResource(
@@ -10,4 +10,6 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
     path = "processedResults"
 )
 public interface ProcessedResultRepository
-    extends PagingAndSortingRepository<ProcessedResult, Long> {}
+    extends JpaRepository<ProcessedResult, Long> {
+        Optional<ProcessedResult> findByManuscriptId(Long manuscriptId);
+    }

@@ -1,148 +1,117 @@
 package miniprojectjo.infra;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
+
+import lombok.extern.slf4j.Slf4j;
 import miniprojectjo.config.kafka.KafkaProcessor;
 import miniprojectjo.domain.*;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
+@Transactional(readOnly = true) 
 public class ProcessedResultViewHandler {
 
-    //<<< DDD / CQRS
+    public static final String SUMMARY_CREATED = "SUMMARY_CREATED";
+    public static final String COVER_GENERATED = "COVER_GENERATED";
+    public static final String PRICED = "PRICED";
+    public static final String DONE = "DONE";
+
     @Autowired
     private ProcessedResultRepository processedResultRepository;
 
+    private Optional<ProcessedResult> getResultByManuscriptId(Long id) {
+        return processedResultRepository.findByManuscriptId(id);
+    }
+
     @StreamListener(KafkaProcessor.INPUT)
     public void whenBookSummaryGenerate_then_CREATE_1(
-        @Payload BookSummaryGenerate bookSummaryGenerate
+        @Payload BookSummaryGenerate event
     ) {
         try {
-            if (!bookSummaryGenerate.validate()) return;
+            if (!event.validate()) return;
 
-            // view 객체 생성
-            ProcessedResult processedResult = new ProcessedResult();
-            // view 객체에 이벤트의 Value 를 set 함
-            processedResult.setManuscriptId(
-                bookSummaryGenerate.getManuscriptId()
-            );
-            processedResult.setSummary(bookSummaryGenerate.getSummary());
-            processedResult.setStatus(SUMMARY_CREATED);
-            processedResult.setUpdatedAt(bookSummaryGenerate.getCreatedAt());
-            // view 레파지 토리에 save
-            processedResultRepository.save(processedResult);
+            ProcessedResult view = new ProcessedResult();
+            view.setManuscriptId(event.getManuscriptId());
+            view.setSummary(event.getSummary());
+            view.setStatus(SUMMARY_CREATED);
+            view.setUpdatedAt(event.getCreatedAt());
+
+            processedResultRepository.save(view);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing BookSummaryGenerate event!!", e);
         }
     }
 
     @StreamListener(KafkaProcessor.INPUT)
     public void whenCoverImageGenerated_then_UPDATE_1(
-        @Payload CoverImageGenerated coverImageGenerated
+        @Payload CoverImageGenerated event
     ) {
         try {
-            if (!coverImageGenerated.validate()) return;
-            // view 객체 조회
-            Optional<ProcessedResult> processedResultOptional = processedResultRepository.findByManuscriptId(
-                coverImageGenerated.getManuscriptId()
-            );
+            if (!event.validate()) return;
 
-            if (processedResultOptional.isPresent()) {
-                ProcessedResult processedResult = processedResultOptional.get();
-                // view 객체에 이벤트의 eventDirectValue 를 set 함
-                processedResult.setCoverImageUrl(
-                    coverImageGenerated.getCoverImageUrl()
-                );
-                processedResult.setUpdatedAt(
-                    coverImageGenerated.getCreatedAt()
-                );
-                // view 레파지 토리에 save
-                processedResultRepository.save(processedResult);
-            }
+            getResultByManuscriptId(event.getManuscriptId()).ifPresent(view -> {
+                view.setCoverImageUrl(event.getCoverImageUrl());
+                view.setUpdatedAt(event.getCreatedAt());
+                processedResultRepository.save(view);
+            });
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing CoverImageGenerated !!(image URL update)", e);
         }
     }
 
     @StreamListener(KafkaProcessor.INPUT)
     public void whenCoverImageGenerated_then_UPDATE_2(
-        @Payload CoverImageGenerated coverImageGenerated
+        @Payload CoverImageGenerated event
     ) {
         try {
-            if (!coverImageGenerated.validate()) return;
-            // view 객체 조회
-            Optional<ProcessedResult> processedResultOptional = processedResultRepository.findByManuscriptId(
-                coverImageGenerated.getManuscriptId()
-            );
+            if (!event.validate()) return;
 
-            if (processedResultOptional.isPresent()) {
-                ProcessedResult processedResult = processedResultOptional.get();
-                // view 객체에 이벤트의 eventDirectValue 를 set 함
-                processedResult.setStatus(COVER_GENERATED);
-                processedResult.setUpdatedAt(
-                    coverImageGenerated.getCreatedAt()
-                );
-                // view 레파지 토리에 save
-                processedResultRepository.save(processedResult);
-            }
+            getResultByManuscriptId(event.getManuscriptId()).ifPresent(view -> {
+                view.setStatus(COVER_GENERATED);
+                view.setUpdatedAt(event.getCreatedAt());
+                processedResultRepository.save(view);
+            });
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing CoverImageGenerated !!(status update)", e);
         }
     }
 
     @StreamListener(KafkaProcessor.INPUT)
     public void whenSubscriptionFeeCalculated_then_UPDATE_3(
-        @Payload SubscriptionFeeCalculated subscriptionFeeCalculated
+        @Payload SubscriptionFeeCalculated event
     ) {
         try {
-            if (!subscriptionFeeCalculated.validate()) return;
-            // view 객체 조회
-            Optional<ProcessedResult> processedResultOptional = processedResultRepository.findByManuscriptId(
-                subscriptionFeeCalculated.getManuscriptId()
-            );
+            if (!event.validate()) return;
 
-            if (processedResultOptional.isPresent()) {
-                ProcessedResult processedResult = processedResultOptional.get();
-                // view 객체에 이벤트의 eventDirectValue 를 set 함
-                processedResult.setSubscriptionFee(
-                    subscriptionFeeCalculated.getSubscriptionFee()
-                );
-                processedResult.setStatus(PRICED);
-                processedResult.setUpdatedAt(
-                    subscriptionFeeCalculated.getCalculatedAt()
-                );
-                // view 레파지 토리에 save
-                processedResultRepository.save(processedResult);
-            }
+            getResultByManuscriptId(event.getManuscriptId()).ifPresent(view -> {
+                view.setSubscriptionFee(event.getSubscriptionFee());
+                view.setStatus(PRICED);
+                view.setUpdatedAt(event.getCalculatedAt());
+                processedResultRepository.save(view);
+            });
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing SubscriptionFeeCalculated event!!", e);
         }
     }
 
     @StreamListener(KafkaProcessor.INPUT)
-    public void whenRegistered_then_UPDATE_4(@Payload Registered registered) {
+    public void whenRegistered_then_UPDATE_4(@Payload Registered event) {
         try {
-            if (!registered.validate()) return;
-            // view 객체 조회
-            Optional<ProcessedResult> processedResultOptional = processedResultRepository.findByManuscriptId(
-                registered.getManuscriptId()
-            );
+            if (!event.validate()) return;
 
-            if (processedResultOptional.isPresent()) {
-                ProcessedResult processedResult = processedResultOptional.get();
-                // view 객체에 이벤트의 eventDirectValue 를 set 함
-                processedResult.setStatus(DONE);
-                processedResult.setUpdatedAt(registered.getCreatedAt());
-                // view 레파지 토리에 save
-                processedResultRepository.save(processedResult);
-            }
+            getResultByManuscriptId(event.getManuscriptId()).ifPresent(view -> {
+                view.setStatus(DONE);
+                view.setUpdatedAt(event.getCreatedAt());
+                processedResultRepository.save(view);
+            });
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error processing Registered event!!", e);
         }
     }
-    //>>> DDD / CQRS
 }

@@ -4,16 +4,17 @@ server:
 spring:
   application:
     name: aigeneration
----
 
-spring:
-  profiles: default
+  profiles:
+    active: default
+
   jpa:
     properties:
       hibernate:
         show_sql: true
         format_sql: true
         implicit_naming_strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
+
   cloud:
     stream:
       kafka:
@@ -30,55 +31,27 @@ spring:
       bindings:
         event-in:
           group: aigeneration
-#<<< EDA / Topic Name
           destination: miniprojectjo
-#>>> EDA / Topic Name
           contentType: application/json
         event-out:
-#<<< EDA / Topic Name
           destination: miniprojectjo
-#>>> EDA / Topic Name
           contentType: application/json
+
+ai:
+  openai:
+    api-key: 1 #[openaikey]
+    # 실제 키는 .env에서 주입하기
 
 logging:
   level:
     org.hibernate.type: trace
     org.springframework.cloud: debug
 
-
-server:
-  port: 8087
-
 ---
-
 spring:
   profiles: docker
-  jpa:
-    properties:
-      hibernate:
-        show_sql: true
-        format_sql: true
-        implicit_naming_strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyComponentPathImpl
   cloud:
     stream:
       kafka:
         binder:
           brokers: my-kafka:9092
-        streams:
-          binder:
-            configuration:
-              default:
-                key:
-                  serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-                value:
-                  serde: org.apache.kafka.common.serialization.Serdes$StringSerde
-      bindings:
-        event-in:
-          group: aigeneration
-          destination: miniprojectjo
-          contentType: application/json
-        event-out:
-          destination: miniprojectjo
-          contentType: application/json
-
-

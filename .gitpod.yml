@@ -8,12 +8,3 @@ tasks:
     init: |
       chmod +x ./init.sh
       ./init.sh
-      
-  - name: Start Kafka
-    init: docker-compose up -d
-
-ports:
-  - port: 2181
-    onOpen: ignore
-  - port: 9092
-    onOpen: notify
